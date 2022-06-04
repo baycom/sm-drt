@@ -1,0 +1,20 @@
+[Unit]
+Description=Smartmeter MODBUS -> MQTT & influxDB Bridge
+
+[Service]
+ExecStart=/usr/bin/node /home/pi/proj/smarthome/sm-drt/index.js -a 1 -a 2 -i michel-hw -i michel-wp
+# Required on some systems
+WorkingDirectory=/home/pi/proj/smarthome/sm-drt
+Restart=always
+# Restart service after 10 seconds if node service crashes
+RestartSec=1
+# Output to syslog
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=sm-drt
+#User=<alternate user>
+#Group=<alternate group>
+#Environment=NODE_ENV=production PORT=1337
+
+[Install]
+WantedBy=multi-user.target
