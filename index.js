@@ -23,13 +23,15 @@ console.log("MQTT Client ID: " + options.id);
 var modbusClient = new ModbusRTU();
 
 if (options.meterhost) {
+	console.log("Modbus host     : " + options.meterhost);
 	modbusClient.connectTCP(options.meterhost, { port: 502 }).then(function (data) {
 		getMetersValue(options.address, options.id);
 	}).catch((error) => {
 		console.error(error);
 		process.exit(-1);
 	});
-} else if (options.inverterport) {
+} else if (options.meterport) {
+	console.log("Modbus host     : " + options.meterport);
 	modbusClient.connectRTUBuffered(options.meterport, { baudRate: 9600, parity: 'even' }).then(function (data) {
 		getMetersValue(options.address, options.id);
 	}).catch((error) => {
