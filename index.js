@@ -2,6 +2,10 @@ var util = require('util');
 var mqtt = require('mqtt');
 var ModbusRTU = require("modbus-serial");
 var Parser = require('binary-parser').Parser;
+var state = {};
+var state_0 = {};
+var state_100 = {};
+
 const commandLineArgs = require('command-line-args')
 
 const optionDefinitions = [
@@ -23,26 +27,27 @@ console.log("MQTT Client ID: " + options.id);
 var modbusClient = new ModbusRTU();
 
 if (options.meterhost) {
-	modbusClient.connectTCP(options.meterhost, { port: 502 }).then(function (data) {
-		getMetersValue(options.address, options.id);
-	}).catch((error) => {
-		console.error(error);
-		process.exit(-1);
+	modbusClient.connectTcpRTUBuffered(options.meterhost, { port: 502 })
+	.then(getMetersValue)
+	.catch(function(e) {
+        console.log(e.message);
 	});
 } else if (options.inverterport) {
-	modbusClient.connectRTUBuffered(options.meterport, { baudRate: 9600, parity: 'even' }).then(function (data) {
-		getMetersValue(options.address, options.id);
-	}).catch((error) => {
-		console.error(error);
-		process.exit(-1);
+	modbusClient.connectRTUBuffered(options.meterport, { baudRate: 9600, parity: 'even' })
+	.then(getMetersValue)
+	.catch(function(e) {
+        console.log(e.message);
 	});
 }
 
 function sendMqtt(id, data) {
+	if(options.debug) {
+		console.log('SM-DRT/' + id, JSON.stringify(data));
+	}
 	MQTTclient.publish('SM-DRT/' + id, JSON.stringify(data));
 }
 
-var MQTTclient = mqtt.connect("mqtt://" + options.mqtthost, { clientId: "SM" });
+var MQTTclient = mqtt.connect("mqtt://" + options.mqtthost, { clientId: options.id[0] });
 MQTTclient.on("connect", function () {
 	console.log("MQTT connected");
 })
@@ -134,64 +139,64 @@ const payloadParser_100 = new Parser()
 	;
 
 
-const getMeterValue_0 = async (address, id) => {
-	modbusClient.setID(address);
-	modbusClient.readHoldingRegisters(0x0, 0x3c).then(function (vals) {
-		var state = payloadParser_0.parse(vals.buffer);
-		if (options.debug) {
-			console.log(util.inspect(vals));
-			console.log(util.inspect(state));
-		}
-		sendMqtt(id, state);
-		return state;
-	}).catch(function (e) {
-		console.log(e);
-		return -1;
+async function getMeterValue_0(address, id) {
+		return new Promise((resolve) => {
+		modbusClient.setID(address);
+		modbusClient.setTimeout(2500);
+		modbusClient.readHoldingRegisters(0x0, 0x3c).then(function (vals) {
+			state_0 = payloadParser_0.parse(vals.buffer);
+			if (options.debug) {
+				console.log("done_0");
+			}
+			resolve(state_0);
+		})
+		.catch(function (e) {
+			console.log(e);
+			resolve(state_0);
+		});
 	});
+	;
 }
 
-const getMeterValue_100 = async (address, id) => {
-	modbusClient.setID(address);
-	modbusClient.readHoldingRegisters(0x100, 0x30).then(function (vals) {
-		var state = payloadParser_100.parse(vals.buffer);
-		if (options.debug) {
-			console.log(util.inspect(vals));
-			console.log(util.inspect(state));
-		}
-		sendMqtt(id, state);
-		return state;
-	}).catch(function (e) {
-		console.log(e);
-		return -1;
-	});
+async function getMeterValue_100(address, id){
+	return new Promise((resolve) => {
+		modbusClient.setID(address);
+		modbusClient.setTimeout(2500);
+		modbusClient.readHoldingRegisters(0x100, 0x30).then(function (vals) {
+			state_100 = payloadParser_100.parse(vals.buffer);
+			Object.assign(state, state_0, state_100);
+			if (options.debug) {
+				console.log(util.inspect(state));
+				console.log("done_100");
+			}
+			sendMqtt(id, state);
+			resolve(state);
+		})
+		.catch(function (e) {
+			console.log(e);
+			resolve(state);
+		});
+});
 }
 
-const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
-const getMetersValue = async (meters, id) => {
+async function getMetersValue(meters, id) {
 	try {
 		var pos = 0;
-		await modbusClient.setTimeout(2500);
 		// get value of all meters
-		for (let meter of meters) {
+		for (let address of options.address) {
+			var id = options.id[pos];
 			if (options.debug) {
-				console.log("query: " + meter + " / " + id[pos]);
+				console.log("query: " + address + " / " + id);
 			}
-			await getMeterValue_0(meter, id[pos]);
-			//		await getMeterValue_100(meter, id[pos]);
+			await getMeterValue_0(address, id);
+			await getMeterValue_100(address, id);
 			pos++;
-			await sleep(options.wait);
 		}
 	} catch (e) {
 		// if error, handle them here (it should not)
 		console.log(e)
-	} finally {
-		// after get all data from salve repeate it again
-
-		setImmediate(() => {
-			getMetersValue(meters, id);
-		})
 	}
+	setTimeout(getMetersValue, options.wait);
 }
 
 
