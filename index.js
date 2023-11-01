@@ -33,7 +33,7 @@ if (options.meterhost) {
 	.catch(function(e) {
         console.log(e.message);
 	});
-} else if (options.inverterport) {
+} else if (options.meterport) {
 	console.log("Modbus host     : " + options.meterport);
 	modbusClient.connectRTUBuffered(options.meterport, { baudRate: 9600, parity: 'even' })
 	.then(getMetersValue)
