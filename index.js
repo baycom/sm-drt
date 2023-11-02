@@ -32,6 +32,7 @@ if (options.meterhost) {
 	.then(getMetersValue)
 	.catch(function(e) {
         console.log(e.message);
+        process.exit(-1);
 	});
 } else if (options.meterport) {
 	console.log("Modbus host     : " + options.meterport);
@@ -39,6 +40,7 @@ if (options.meterhost) {
 	.then(getMetersValue)
 	.catch(function(e) {
         console.log(e.message);
+        process.exit(-1);
 	});
 }
 
@@ -56,7 +58,7 @@ MQTTclient.on("connect", function () {
 
 MQTTclient.on("error", function (error) {
 	console.log("Can't connect" + error);
-	process.exit(1)
+	process.exit(-1)
 });
 
 
@@ -155,6 +157,7 @@ async function getMeterValue_0(address, id) {
 		.catch(function (e) {
 			console.log(e);
 			resolve(state_0);
+		        process.exit(-1);
 		});
 	});
 	;
@@ -177,6 +180,7 @@ async function getMeterValue_100(address, id){
 		.catch(function (e) {
 			console.log(e);
 			resolve(state);
+		        process.exit(-1);
 		});
 });
 }
