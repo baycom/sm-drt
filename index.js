@@ -35,7 +35,7 @@ if (options.meterhost) {
         process.exit(-1);
 	});
 } else if (options.meterport) {
-	console.log("Modbus host     : " + options.meterport);
+	console.log("Modbus port     : " + options.meterport);
 	modbusClient.connectRTUBuffered(options.meterport, { baudRate: 9600, parity: 'even' })
 	.then(getMetersValue)
 	.catch(function(e) {
@@ -61,6 +61,7 @@ MQTTclient.on("error", function (error) {
 	process.exit(-1)
 });
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 const payloadParser_0 = new Parser()
 	.seek(0x0E * 2)
@@ -185,7 +186,7 @@ async function getMeterValue_100(address, id){
 });
 }
 
-async function getMetersValue(meters, id) {
+async function getMetersValue() {
 	try {
 		var pos = 0;
 		// get value of all meters
@@ -194,6 +195,7 @@ async function getMetersValue(meters, id) {
 			if (options.debug) {
 				console.log("query: " + address + " / " + id);
 			}
+			await sleep(100);
 			await getMeterValue_0(address, id);
 			await getMeterValue_100(address, id);
 			pos++;
