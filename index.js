@@ -32,13 +32,15 @@ if (options.meterhost) {
 	.then(getMetersValue)
 	.catch(function(e) {
         console.log(e.message);
+        process.exit(-1);
 	});
 } else if (options.meterport) {
-	console.log("Modbus host     : " + options.meterport);
+	console.log("Modbus port     : " + options.meterport);
 	modbusClient.connectRTUBuffered(options.meterport, { baudRate: 9600, parity: 'even' })
 	.then(getMetersValue)
 	.catch(function(e) {
         console.log(e.message);
+        process.exit(-1);
 	});
 }
 
@@ -46,7 +48,7 @@ function sendMqtt(id, data) {
 	if(options.debug) {
 		console.log('SM-DRT/' + id, JSON.stringify(data));
 	}
-	MQTTclient.publish('SM-DRT/' + id, JSON.stringify(data));
+	MQTTclient.publish('SM-DRT/' + id, JSON.stringify(data), { retain: true });
 }
 
 var MQTTclient = mqtt.connect("mqtt://" + options.mqtthost, { clientId: options.id[0] });
@@ -56,9 +58,10 @@ MQTTclient.on("connect", function () {
 
 MQTTclient.on("error", function (error) {
 	console.log("Can't connect" + error);
-	process.exit(1)
+	process.exit(-1)
 });
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 const payloadParser_0 = new Parser()
 	.seek(0x0E * 2)
@@ -155,6 +158,7 @@ async function getMeterValue_0(address, id) {
 		.catch(function (e) {
 			console.log(e);
 			resolve(state_0);
+		        process.exit(-1);
 		});
 	});
 	;
@@ -177,11 +181,12 @@ async function getMeterValue_100(address, id){
 		.catch(function (e) {
 			console.log(e);
 			resolve(state);
+		        process.exit(-1);
 		});
 });
 }
 
-async function getMetersValue(meters, id) {
+async function getMetersValue() {
 	try {
 		var pos = 0;
 		// get value of all meters
@@ -190,6 +195,7 @@ async function getMetersValue(meters, id) {
 			if (options.debug) {
 				console.log("query: " + address + " / " + id);
 			}
+			await sleep(100);
 			await getMeterValue_0(address, id);
 			await getMeterValue_100(address, id);
 			pos++;
